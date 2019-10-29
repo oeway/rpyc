@@ -191,6 +191,11 @@ def _undumpable(obj, stream):
 def _dump(obj, stream):
     _dump_registry.get(type(obj), _undumpable)(obj, stream)
 
+def read_str(stream, l):
+    if is_py3k:
+        return stream.read(l).decode('ascii')
+    else:
+        return stream.read(l)
 # ===============================================================================
 # loading
 # ===============================================================================
@@ -254,34 +259,35 @@ def _load_complex(stream):
 
 @register(_load_registry, TAG_STR1)
 def _load_str1(stream):
-    return stream.read(1)
+    return read_str(stream, 1)
+    
 
 
 @register(_load_registry, TAG_STR2)
 def _load_str2(stream):
-    return stream.read(2)
+    return read_str(stream, 2)
 
 
 @register(_load_registry, TAG_STR3)
 def _load_str3(stream):
-    return stream.read(3)
+    return read_str(stream, 3)
 
 
 @register(_load_registry, TAG_STR4)
 def _load_str4(stream):
-    return stream.read(4)
+    return read_str(stream, 4)
 
 
 @register(_load_registry, TAG_STR_L1)
 def _load_str_l1(stream):
     l, = I1.unpack(stream.read(1))
-    return stream.read(l)
+    return read_str(stream, l)
 
 
 @register(_load_registry, TAG_STR_L4)
 def _load_str_l4(stream):
     l, = I4.unpack(stream.read(4))
-    return stream.read(l)
+    return read_str(stream, l)
 
 
 @register(_load_registry, TAG_UNICODE)
