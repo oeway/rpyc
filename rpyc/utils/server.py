@@ -21,6 +21,9 @@ from rpyc.lib.compat import poll, get_exc_errno
 signal = safe_import("signal")
 gevent = safe_import("gevent")
 
+# patch socket for jython
+if not hasattr(socket, 'SOMAXCONN'):
+    socket.SOMAXCONN = 128
 
 class Server(object):
     """Base server implementation
