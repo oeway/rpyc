@@ -222,8 +222,6 @@ class MasterService(Service):
         conn.namespace = slave.namespace
         conn.builtin = builtin
         conn.builtins = builtin
-        from rpyc.utils.classic import teleport_function
-        conn.teleport = partial(teleport_function, conn)
 
 
 class ClassicService(MasterService, SlaveService):

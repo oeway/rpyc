@@ -12,10 +12,9 @@ other zeroconf implementation -- I'll be happy to include them.
 Refer to :file:`rpyc/scripts/rpyc_registry.py` for more info.
 """
 import sys
-import socket
+from rpyc.external import socket
 import time
 import logging
-from contextlib import closing
 from rpyc.core import brine
 
 
@@ -23,6 +22,13 @@ DEFAULT_PRUNING_TIMEOUT = 4 * 60
 MAX_DGRAM_SIZE = 1500
 REGISTRY_PORT = 18811
 
+class closing():
+    def __init__(self, thing):
+        self.thing = thing
+    def __enter__(self):
+        return self.thing
+    def __exit__(self, *exc_info):
+        self.thing.close()
 
 # ------------------------------------------------------------------------------
 # servers

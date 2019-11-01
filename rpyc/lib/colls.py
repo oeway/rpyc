@@ -1,6 +1,5 @@
 from __future__ import with_statement
-import weakref
-from threading import Lock
+# import weakref
 
 
 class WeakValueDict(object):
@@ -42,7 +41,7 @@ class WeakValueDict(object):
     def __setitem__(self, key, value):
         def remover(wr, _dict=self._dict, key=key):
             _dict.pop(key, None)
-        self._dict[key] = weakref.ref(value, remover)
+        self._dict[key] = value #weakref.ref(value, remover)
 
     def __delitem__(self, key):
         del self._dict[key]
@@ -73,10 +72,9 @@ class WeakValueDict(object):
 
 class RefCountingColl(object):
     """a set-like object that implements refcounting on its contained objects"""
-    __slots__ = ("_lock", "_dict")
+    __slots__ = ("_dict")
 
     def __init__(self):
-        self._lock = Lock()
         self._dict = {}
 
     def __repr__(self):
@@ -84,27 +82,23 @@ class RefCountingColl(object):
 
     def add(self, key, obj):
         """Add object to refcounting coll."""
-        with self._lock:
-            slot = self._dict.get(key, None)
-            if slot is None:
-                slot = [obj, 0]
-            else:
-                slot[1] += 1
-            self._dict[key] = slot
+        slot = self._dict.get(key, None)
+        if slot is None:
+            slot = [obj, 0]
+        else:
+            slot[1] += 1
+        self._dict[key] = slot
 
     def clear(self):
-        with self._lock:
-            self._dict.clear()
+        self._dict.clear()
 
     def decref(self, key, count=1):
-        with self._lock:
-            slot = self._dict[key]
-            if slot[1] < count:
-                del self._dict[key]
-            else:
-                slot[1] -= count
-                self._dict[key] = slot
+        slot = self._dict[key]
+        if slot[1] < count:
+            del self._dict[key]
+        else:
+            slot[1] -= count
+            self._dict[key] = slot
 
     def __getitem__(self, key):
-        with self._lock:
-            return self._dict[key][0]
+        return self._dict[key][0]

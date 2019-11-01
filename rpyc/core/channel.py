@@ -1,9 +1,8 @@
 """*Channel* is an abstraction layer over streams that works with *packets of data*,
 rather than an endless stream of bytes, and adds support for compression.
 """
-from rpyc.lib import safe_import
 from rpyc.lib.compat import Struct, BYTES_LITERAL
-zlib = safe_import("zlib")
+from rpyc.external import zlib
 
 # * 64 bit length field?
 # * separate \n into a FlushingChannel subclass?

@@ -9,13 +9,12 @@ Note that by changing the configuration parameters, this module can be made
 non-secure. Keep this in mind.
 """
 import sys
-import traceback
+
+# import exceptions as exceptions_module
+
 try:
-    import exceptions as exceptions_module
-except ImportError:
-    import builtins as exceptions_module
-try:
-    from types import InstanceType, ClassType
+    from rpyc.external import types
+    ClassType = types.ClassType
 except ImportError:
     ClassType = type
 
@@ -36,6 +35,8 @@ except NameError:
     # python 2.4 compatible
     BaseException = Exception
 
+def format_exception(typ, val, tb):
+    return str(typ)+str(val)+str(tb)
 
 def dump(typ, val, tb, include_local_traceback, include_local_version):
     """Dumps the given exceptions info, as returned by ``sys.exc_info()``
@@ -59,7 +60,7 @@ def dump(typ, val, tb, include_local_traceback, include_local_version):
         return typ
 
     if include_local_traceback:
-        tbtext = "".join(traceback.format_exception(typ, val, tb))
+        tbtext = "".join(format_exception(typ, val, tb))
     else:
         tbtext = "<traceback denied>"
     attrs = []
@@ -130,8 +131,8 @@ def load(val, import_custom_exceptions, instantiate_custom_exceptions, instantia
             cls = getattr(sys.modules[modname], clsname, None)
         else:
             cls = None
-    elif modname == exceptions_module.__name__:
-        cls = getattr(exceptions_module, clsname, None)
+    # elif modname == exceptions_module.__name__:
+    #     cls = getattr(exceptions_module, clsname, None)
     else:
         cls = None
 
@@ -162,7 +163,7 @@ def load(val, import_custom_exceptions, instantiate_custom_exceptions, instantia
 
     # support old-style exception classes
     if ClassType is not type and isinstance(cls, ClassType):
-        exc = InstanceType(cls)
+        exc = types.InstanceType(cls)
     else:
         exc = cls.__new__(cls)
 

@@ -2,12 +2,12 @@
 """
 import sys
 import itertools
-import socket
+from rpyc.external import socket
 import time  # noqa: F401
-import gc  # noqa: F401
+# import gc  # noqa: F401
 
-from threading import Lock, Condition
-from rpyc.lib import spawn, Timeout, get_methods, get_id_pack
+from rpyc.external.timeout import Timeout
+from rpyc.lib import spawn, get_methods, get_id_pack
 from rpyc.lib.compat import pickle, next, is_py3k, maxint, select_error, acquire_lock  # noqa: F401
 from rpyc.lib.colls import WeakValueDict, RefCountingColl
 from rpyc.core import consts, brine, vinegar, netref
@@ -143,9 +143,6 @@ class Connection(object):
         self._HANDLERS = self._request_handlers()
         self._channel = channel
         self._seqcounter = itertools.count()
-        self._recvlock = Lock()
-        self._sendlock = Lock()
-        self._recv_event = Condition()
         self._request_callbacks = {}
         self._local_objects = RefCountingColl()
         self._last_traceback = None
@@ -243,10 +240,6 @@ class Connection(object):
         self._send_queue.append(data)
         # It is crucial to check the queue each time AFTER releasing the lock:
         while self._send_queue:
-            if not self._sendlock.acquire(False):
-                # Another thread holds the lock. It will send the data after
-                # it's done with its current job. We can safely return.
-                return
             try:
                 # Can happen if another consumer was scheduled in between
                 # `while` and `acquire`:
@@ -258,7 +251,7 @@ class Connection(object):
                 data = self._send_queue.pop(0)
                 self._channel.send(data)
             finally:
-                self._sendlock.release()
+                pass
 
     def _box(self, obj):  # boxing
         """store a local object in such a way that it could be recreated on
@@ -370,9 +363,6 @@ class Connection(object):
                   otherwise.
         """
         timeout = Timeout(timeout)
-        with self._recv_event:
-            if not self._recvlock.acquire(False):
-                return wait_for_lock and self._recv_event.wait(timeout.timeleft())
         try:
             data = self._channel.poll(timeout) and self._channel.recv()
             if not data:
@@ -381,9 +371,7 @@ class Connection(object):
             self.close()
             raise
         finally:
-            self._recvlock.release()
-            with self._recv_event:
-                self._recv_event.notify_all()
+            pass
         self._dispatch(data)
         return True
 

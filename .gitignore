@@ -10,3 +10,5 @@ rpyc.egg-info
 *.egg
 *.class
 build/
+__target__
+.DS_Store

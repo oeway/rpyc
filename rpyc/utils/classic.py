@@ -6,7 +6,6 @@ from rpyc.lib.compat import pickle, execute, is_py3k  # noqa: F401
 from rpyc.core.service import ClassicService, Slave
 from rpyc.utils import factory
 from rpyc.core.service import ModuleNamespace  # noqa: F401
-from contextlib import contextmanager
 
 
 DEFAULT_SERVER_PORT = 18812
@@ -309,58 +308,6 @@ def deliver(conn, localobj):
         bytes(pickle.dumps(localobj)))
 
 
-@contextmanager
-def redirected_stdio(conn):
-    r"""
-    Redirects the other party's ``stdin``, ``stdout`` and ``stderr`` to
-    those of the local party, so remote IO will occur locally.
-
-    Example usage::
-
-        with redirected_stdio(conn):
-            conn.modules.sys.stdout.write("hello\n")   # will be printed locally
-
-    """
-    orig_stdin = conn.modules.sys.stdin
-    orig_stdout = conn.modules.sys.stdout
-    orig_stderr = conn.modules.sys.stderr
-    try:
-        conn.modules.sys.stdin = sys.stdin
-        conn.modules.sys.stdout = sys.stdout
-        conn.modules.sys.stderr = sys.stderr
-        yield
-    finally:
-        conn.modules.sys.stdin = orig_stdin
-        conn.modules.sys.stdout = orig_stdout
-        conn.modules.sys.stderr = orig_stderr
-
-
-def pm(conn):
-    """same as ``pdb.pm()`` but on a remote exception
-
-    :param conn: the RPyC connection
-    """
-    # pdb.post_mortem(conn.root.getconn()._last_traceback)
-    with redirected_stdio(conn):
-        conn.modules.pdb.post_mortem(conn.root.getconn()._last_traceback)
-
-
-def interact(conn, namespace=None):
-    """remote interactive interpreter
-
-    :param conn: the RPyC connection
-    :param namespace: the namespace to use (a ``dict``)
-    """
-    if namespace is None:
-        namespace = {}
-    namespace["conn"] = conn
-    with redirected_stdio(conn):
-        conn.execute("""def _rinteract(ns):
-            import code
-            code.interact(local = dict(ns))""")
-        conn.namespace["_rinteract"](namespace)
-
-
 class MockClassicConnection(object):
     """Mock classic RPyC connection object. Useful when you want the same code to run remotely or locally.
     """
@@ -368,28 +315,3 @@ class MockClassicConnection(object):
     def __init__(self):
         self.root = Slave()
         ClassicService._install(self, self.root)
-
-
-def teleport_function(conn, func, globals=None, def_=True):
-    """
-    "Teleports" a function (including nested functions/closures) over the RPyC connection.
-    The function is passed in bytecode form and reconstructed on the other side.
-
-    The function cannot have non-brinable defaults (e.g., ``def f(x, y=[8]):``,
-    since a ``list`` isn't brinable), or make use of non-builtin globals (like modules).
-    You can overcome the second restriction by moving the necessary imports into the
-    function body, e.g. ::
-
-        def f(x, y):
-            import os
-            return (os.getpid() + y) * x
-
-    :param conn: the RPyC connection
-    :param func: the function object to be delivered to the other party
-    """
-    if globals is None:
-        globals = conn.namespace
-    from rpyc.utils.teleportation import export_function
-    exported = export_function(func)
-    return conn.modules["rpyc.utils.teleportation"].import_function(
-        exported, globals, def_)

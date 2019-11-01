@@ -3,9 +3,8 @@ A library of various helpers functions and classes
 """
 import inspect
 import sys
-import socket
+from rpyc.external import socket
 import logging
-import threading
 import time
 import random
 from rpyc.lib.compat import maxint  # noqa: F401
@@ -25,20 +24,6 @@ class MissingModule(object):
     def __bool__(self):
         return False
     __nonzero__ = __bool__
-
-
-def safe_import(name):
-    try:
-        mod = __import__(name, None, None, "*")
-    except ImportError:
-        mod = MissingModule(name)
-    except Exception:
-        # issue 72: IronPython on Mono
-        if sys.platform == "cli" and name == "signal":  # os.name == "posix":
-            mod = MissingModule(name)
-        else:
-            raise
-    return mod
 
 
 def setup_logger(quiet=False, logfile=None):
@@ -70,50 +55,10 @@ class hybridmethod(object):
 def spawn(*args, **kwargs):
     """Start and return daemon thread. ``spawn(func, *args, **kwargs)``."""
     func, args = args[0], args[1:]
-    thread = threading.Thread(target=func, args=args, kwargs=kwargs)
-    thread.daemon = True
-    thread.start()
-    return thread
+    func(*args, **kwargs)
 
 
-def spawn_waitready(init, main):
-    """
-    Start a thread that runs ``init`` and then ``main``. Wait for ``init`` to
-    be finished before returning.
 
-    Returns a tuple ``(thread, init_result)``.
-    """
-    event = threading.Event()
-    stack = [event]     # used to exchange arguments with thread, so `event`
-    # can be deleted when it has fulfilled its purpose.
-
-    def start():
-        stack.append(init())
-        stack.pop(0).set()
-        return main()
-    thread = spawn(start)
-    event.wait()
-    return thread, stack.pop()
-
-
-class Timeout:
-
-    def __init__(self, timeout):
-        if isinstance(timeout, Timeout):
-            self.finite = timeout.finite
-            self.tmax = timeout.tmax
-        else:
-            self.finite = timeout is not None and timeout >= 0
-            self.tmax = time.time() + timeout if self.finite else None
-
-    def expired(self):
-        return self.finite and time.time() >= self.tmax
-
-    def timeleft(self):
-        return max((0, self.tmax - time.time())) if self.finite else None
-
-    def sleep(self, interval):
-        time.sleep(min(interval, self.timeleft()) if self.finite else interval)
 
 
 def socket_backoff_connect(family, socktype, proto, addr, timeout, attempts):

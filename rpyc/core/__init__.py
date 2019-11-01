@@ -1,5 +1,5 @@
 # flake8: noqa: F401
-from rpyc.core.stream import SocketStream, TunneledSocketStream, PipeStream
+from rpyc.core.stream import SocketStream
 from rpyc.core.channel import Channel
 from rpyc.core.protocol import Connection
 from rpyc.core.netref import BaseNetref

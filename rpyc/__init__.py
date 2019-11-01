@@ -42,7 +42,7 @@ Classic-style usage::
 
 """
 # flake8: noqa: F401
-from rpyc.core import (SocketStream, TunneledSocketStream, PipeStream, Channel,
+from rpyc.core import (SocketStream, Channel,
                        Connection, Service, BaseNetref, AsyncResult, GenericException,
                        AsyncResultTimeout, VoidService, SlaveService, MasterService, ClassicService)
 from rpyc.utils.factory import (connect_stream, connect_channel, connect_pipes,
@@ -53,7 +53,6 @@ from rpyc.utils import classic
 from rpyc.version import version as __version__
 
 from rpyc.lib import setup_logger, spawn
-from rpyc.utils.server import OneShotServer, ThreadedServer, ThreadPoolServer, ForkingServer
 
 __author__ = "Tomer Filiba (tomerfiliba@gmail.com)"
 

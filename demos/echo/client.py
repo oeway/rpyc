@@ -33,8 +33,8 @@ def echo_forever(main_queue, main_event):
         if main_event.is_set():
             main_event.clear()
     except Exception:
-        import traceback
-        traceback.print_exc()
+        # import traceback
+        # traceback.print_exc()
         print("EXCEPT ('{0}', {1}) with fd {2} over {3}s".format(addr, port, fileno, cdelta + delta))
     finally:
         main_queue.put(_max)

@@ -21,28 +21,21 @@ else:
         return text
     maxint = sys.maxint
 
-try:
-    from struct import Struct  # noqa: F401
-except ImportError:
-    import struct
 
-    class Struct(object):
-        __slots__ = ["format", "size"]
+class Struct(object):
+    __slots__ = ["format", "size"]
 
-        def __init__(self, format):
-            self.format = format
-            self.size = struct.calcsize(format)
+    def __init__(self, format):
+        self.format = format
+        self.size = struct.calcsize(format)
 
-        def pack(self, *args):
-            return struct.pack(self.format, *args)
+    def pack(self, *args):
+        return struct.pack(self.format, *args)
 
-        def unpack(self, data):
-            return struct.unpack(self.format, data)
+    def unpack(self, data):
+        return struct.unpack(self.format, data)
 
-try:
-    from cStringIO import StringIO as BytesIO
-except ImportError:
-    from io import BytesIO  # noqa: F401
+
 
 try:
     next = next
@@ -50,10 +43,6 @@ except NameError:
     def next(iterator):
         return iterator.next()
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle  # noqa: F401
 
 try:
     callable = callable
@@ -61,20 +50,11 @@ except NameError:
     def callable(obj):
         return hasattr(obj, "__call__")
 
-try:
-    import select as select_module
-except ImportError:
-    select_module = None
 
-    def select(*args):
-        raise ImportError("select not supported on this platform")
-else:
-    # jython
-    if hasattr(select_module, 'cpython_compatible_select'):
-        from select import cpython_compatible_select as select
-    else:
-        from select import select
+select_module = None
 
+def select(*args):
+    raise ImportError("select not supported on this platform")
 
 def get_exc_errno(exc):
     if hasattr(exc, "errno"):

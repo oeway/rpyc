@@ -24,66 +24,8 @@ validate an incoming connection. Using them is pretty trivial ::
     s.start()
 """
 import sys
-from rpyc.lib import safe_import
-ssl = safe_import("ssl")
-
 
 class AuthenticationError(Exception):
     """raised to signal a failed authentication attempt"""
     pass
 
-
-class SSLAuthenticator(object):
-    """An implementation of the authenticator protocol for ``SSL``. The given
-    socket is wrapped by ``ssl.wrap_socket`` and is validated based on
-    certificates
-
-    :param keyfile: the server's key file
-    :param certfile: the server's certificate file
-    :param ca_certs: the server's certificate authority file
-    :param cert_reqs: the certificate requirements. By default, if ``ca_cert`` is
-                      specified, the requirement is set to ``CERT_REQUIRED``;
-                      otherwise it is set to ``CERT_NONE``
-    :param ciphers: the list of ciphers to use, or ``None``, if you do not wish
-                    to restrict the available ciphers. New in Python 2.7/3.2
-    :param ssl_version: the SSL version to use
-
-    Refer to `ssl.wrap_socket <http://docs.python.org/dev/library/ssl.html#ssl.wrap_socket>`_
-    for more info.
-
-    Clients can connect to this authenticator using
-    :func:`rpyc.utils.factory.ssl_connect`. Classic clients can use directly
-    :func:`rpyc.utils.classic.ssl_connect` which sets the correct
-    service parameters.
-    """
-
-    def __init__(self, keyfile, certfile, ca_certs=None, cert_reqs=None,
-                 ssl_version=None, ciphers=None):
-        self.keyfile = str(keyfile)
-        self.certfile = str(certfile)
-        self.ca_certs = str(ca_certs) if ca_certs else None
-        self.ciphers = ciphers
-        if cert_reqs is None:
-            if ca_certs:
-                self.cert_reqs = ssl.CERT_REQUIRED
-            else:
-                self.cert_reqs = ssl.CERT_NONE
-        else:
-            self.cert_reqs = cert_reqs
-        if ssl_version is None:
-            self.ssl_version = ssl.PROTOCOL_TLSv1
-        else:
-            self.ssl_version = ssl_version
-
-    def __call__(self, sock):
-        kwargs = dict(keyfile=self.keyfile, certfile=self.certfile,
-                      server_side=True, ca_certs=self.ca_certs, cert_reqs=self.cert_reqs,
-                      ssl_version=self.ssl_version)
-        if self.ciphers is not None:
-            kwargs["ciphers"] = self.ciphers
-        try:
-            sock2 = ssl.wrap_socket(sock, **kwargs)
-        except ssl.SSLError:
-            ex = sys.exc_info()[1]
-            raise AuthenticationError(str(ex))
-        return sock2, sock2.getpeercert()

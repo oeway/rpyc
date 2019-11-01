@@ -3,26 +3,24 @@ RPyC connection factories: ease the creation of a connection for the common
 cases)
 """
 from __future__ import with_statement
-import socket
-from contextlib import closing
+from rpyc.external import socket
 
-import threading
-try:
-    from thread import interrupt_main
-except ImportError:
-    try:
-        from _thread import interrupt_main
-    except ImportError:
-        # assume jython (#83)
-        from java.lang import System
-        interrupt_main = System.exit
+class closing():
+    def __init__(self, thing):
+        self.thing = thing
+    def __enter__(self):
+        return self.thing
+    def __exit__(self, *exc_info):
+        self.thing.close()
+
+def interrupt_main():
+    pass
 
 from rpyc.core.channel import Channel
-from rpyc.core.stream import SocketStream, TunneledSocketStream, PipeStream
+from rpyc.core.stream import SocketStream
 from rpyc.core.service import VoidService
 from rpyc.utils.registry import UDPRegistryClient
-from rpyc.lib import safe_import, spawn
-ssl = safe_import("ssl")
+from rpyc.lib import spawn
 
 
 class DiscoveryError(Exception):
@@ -54,32 +52,6 @@ def connect_stream(stream, service=VoidService, config={}):
     :returns: an RPyC connection
     """
     return connect_channel(Channel(stream), service=service, config=config)
-
-
-def connect_pipes(input, output, service=VoidService, config={}):
-    """
-    creates a connection over the given input/output pipes
-
-    :param input: the input pipe
-    :param output: the output pipe
-    :param service: the local service to expose (defaults to Void)
-    :param config: configuration dict
-
-    :returns: an RPyC connection
-    """
-    return connect_stream(PipeStream(input, output), service=service, config=config)
-
-
-def connect_stdpipes(service=VoidService, config={}):
-    """
-    creates a connection over the standard input/output pipes
-
-    :param service: the local service to expose (defaults to Void)
-    :param config: configuration dict
-
-    :returns: an RPyC connection
-    """
-    return connect_stream(PipeStream.from_std(), service=service, config=config)
 
 
 def connect(host, port, service=VoidService, config={}, ipv6=False, keepalive=False):
@@ -141,25 +113,7 @@ def ssl_connect(host, port, keyfile=None, certfile=None, ca_certs=None,
 
     :returns: an RPyC connection
     """
-    ssl_kwargs = {"server_side": False}
-    if keyfile is not None:
-        ssl_kwargs["keyfile"] = keyfile
-    if certfile is not None:
-        ssl_kwargs["certfile"] = certfile
-    if ca_certs is not None:
-        ssl_kwargs["ca_certs"] = ca_certs
-        ssl_kwargs["cert_reqs"] = ssl.CERT_REQUIRED
-    if cert_reqs is not None:
-        ssl_kwargs["cert_reqs"] = cert_reqs
-    if ssl_version is None:
-        ssl_kwargs["ssl_version"] = ssl.PROTOCOL_TLSv1
-    else:
-        ssl_kwargs["ssl_version"] = ssl_version
-    if ciphers is not None:
-        ssl_kwargs["ciphers"] = ciphers
-    s = SocketStream.ssl_connect(host, port, ssl_kwargs, ipv6=ipv6, keepalive=keepalive)
-    return connect_stream(s, service, config)
-
+    pass
 
 def _get_free_port():
     """attempts to find a free port"""
@@ -167,35 +121,6 @@ def _get_free_port():
     with closing(s):
         s.bind(("localhost", 0))
         return s.getsockname()[1]
-
-
-_ssh_connect_lock = threading.Lock()
-
-
-def ssh_connect(remote_machine, remote_port, service=VoidService, config={}):
-    """
-    Connects to an RPyC server over an SSH tunnel (created by plumbum).
-    See `Plumbum tunneling <http://plumbum.readthedocs.org/en/latest/remote.html#tunneling>`_
-    for further details.
-
-    .. note::
-       This function attempts to allocate a free TCP port for the underlying tunnel, but doing
-       so is inherently prone to a race condition with other processes who might bind the
-       same port before sshd does. Albeit unlikely, there is no sure way around it.
-
-    :param remote_machine: an :class:`plumbum.remote.RemoteMachine` instance
-    :param remote_port: the port of the remote server
-    :param service: the local service to expose (defaults to Void)
-    :param config: configuration dict
-
-    :returns: an RPyC connection
-    """
-    with _ssh_connect_lock:
-        loc_port = _get_free_port()
-        tun = remote_machine.tunnel(loc_port, remote_port)
-        stream = TunneledSocketStream.connect("localhost", loc_port)
-        stream.tun = tun
-    return service._connect(Channel(stream), config=config)
 
 
 def discover(service_name, host=None, registrar=None, timeout=2):
@@ -257,11 +182,7 @@ def connect_subproc(args, service=VoidService, config={}):
     :param service: the local service to expose (defaults to Void)
     :param config: configuration dict
     """
-    from subprocess import Popen, PIPE
-    proc = Popen(args, stdin=PIPE, stdout=PIPE)
-    conn = connect_pipes(proc.stdout, proc.stdin, service=service, config=config)
-    conn.proc = proc  # just so you can have control over the processs
-    return conn
+    pass
 
 
 def connect_thread(service=VoidService, config={}, remote_service=VoidService, remote_config={}):
@@ -306,7 +227,6 @@ def connect_multiprocess(service=VoidService, config={}, remote_service=VoidServ
 
     Contributed by *@tvanzyl*
     """
-    from multiprocessing import Process
 
     listener = socket.socket()
     listener.bind(("localhost", 0))
@@ -323,7 +243,6 @@ def connect_multiprocess(service=VoidService, config={}, remote_service=VoidServ
         except KeyboardInterrupt:
             interrupt_main()
 
-    t = Process(target=server)
-    t.start()
+    server()
     host, port = listener.getsockname()
     return connect(host, port, service=service, config=config)

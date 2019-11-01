@@ -2,7 +2,7 @@
 of *magic*, so beware.
 """
 import sys
-import types
+from rpyc.external import types
 from rpyc.lib import get_methods, get_id_pack
 from rpyc.lib.compat import pickle, is_py3k, maxint, with_metaclass
 from rpyc.core import consts
